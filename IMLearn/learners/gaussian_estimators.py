@@ -169,7 +169,7 @@ class MultivariateGaussian:
 
         Returns
         -------
-        pdfs: ndarray of shape (n_samples, ?n_features?)
+        pdfs: ndarray of shape (n_samples, )
             Calculated values of given samples for PDF function of N(mu_, cov_)
 
         Raises
@@ -179,9 +179,15 @@ class MultivariateGaussian:
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
         n, k = X.shape
-        first = 1 / np.sqrt(np.power(2*np.pi, k) * np.linalg.det(self.cov_))
-        second = np.exp(-0.5 * np.dot(X-self.mu_, np.linalg.inv(self.cov_)) * X-self.mu_)
-        return np.array(first * second)
+        pdfs = np.ndarray(shape=n)
+        first = 1 / np.sqrt(((2*np.pi)**k) * np.linalg.det(self.cov_))
+        for i in range(n):
+            second = np.exp(-0.5 * np.matmul(
+                np.matmul(
+                    np.transpose(X[i]-self.mu_), np.linalg.inv(self.cov_)),
+                (X[i]-self.mu_)))
+            pdfs[i] = first * second
+        return pdfs
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:

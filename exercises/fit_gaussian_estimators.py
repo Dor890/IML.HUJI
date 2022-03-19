@@ -96,7 +96,7 @@ def test_multivariate_gaussian():
     # Quiz calculations
     # print('Cov of 1 and 4')
     # print(multi_gaussian.cov_[0][3])
-    # print("CHECK")
+    # print("Check PDF")
     # print(multi_gaussian.pdf(samples))
 
 if __name__ == '__main__':
