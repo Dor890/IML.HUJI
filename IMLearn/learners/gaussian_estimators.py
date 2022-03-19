@@ -78,9 +78,12 @@ class UnivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        first = 1 / np.sqrt(2 * np.pi * self.var_)
-        second = np.exp(-(X - self.mu_)**2 / 2*self.var_)
-        return np.array(first * second)
+        pdf_array = []
+        for Xi in X:
+            first = 1 / np.sqrt(2 * np.pi * self.var_)
+            second = np.exp(-np.power((Xi-self.mu_), 2) / (2 * self.var_))
+            pdf_array.append(first * second)
+        return np.array(pdf_array)
 
     @staticmethod
     def log_likelihood(mu: float, sigma: float, X: np.ndarray) -> float:
@@ -101,9 +104,10 @@ class UnivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        first = -0.5 * np.log(2 * np.pi * sigma**2)
-        second = (X - mu)**2 / (2 * sigma**2)
-        return first - second
+        first = (X.size / 2) * np.log(2 * np.pi * sigma**2)
+        before_sum = [(Xi - mu)**2 for Xi in X]
+        second = np.sum(before_sum) / (2 * sigma**2)
+        return -1 * (first + second)
 
 
 class MultivariateGaussian:
@@ -149,8 +153,8 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        self.mu_ = np.array([Xi.mean() for Xi in X])
-        self.cov_ = np.ma.cov(X)
+        self.mu_ = np.mean(X, axis=0)
+        self.cov_ = np.cov(X, rowvar=False, bias=False)
         self.fitted_ = True
         return self
 
@@ -165,7 +169,7 @@ class MultivariateGaussian:
 
         Returns
         -------
-        pdfs: ndarray of shape (n_samples, )
+        pdfs: ndarray of shape (n_samples, ?n_features?)
             Calculated values of given samples for PDF function of N(mu_, cov_)
 
         Raises
@@ -174,8 +178,9 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        first = 1 / np.sqrt(np.power(2*np.pi, X.size) * np.linalg.det(self.cov_))
-        second = np.exp(-0.5 * np.transpose(X-self.mu_) * np.power(self.cov_, -1) * (X-self.mu_))
+        n, k = X.shape
+        first = 1 / np.sqrt(np.power(2*np.pi, k) * np.linalg.det(self.cov_))
+        second = np.exp(-0.5 * np.dot(X-self.mu_, np.linalg.inv(self.cov_)) * X-self.mu_)
         return np.array(first * second)
 
     @staticmethod
@@ -197,7 +202,8 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        n_samples = X.size
-        first = (-n_samples/2) * np.log(2 * np.pi * cov**2)
-        second = (X-mu)**2 / (2 * cov**2)
-        return first-second
+        n, k = X.shape
+        first = -(n*k/2) * np.log(2*np.pi) - (n/2) * np.log(np.linalg.det(cov))
+        before_sum = np.dot((X - mu), np.linalg.inv(cov)) * (X - mu)
+        third = 0.5 * np.sum(before_sum)
+        return first - third
