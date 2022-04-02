@@ -50,17 +50,23 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series,
     # Passing only over the Non-categorical features which we can measure
     features = ['bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot',
                 'floors', 'waterfront', 'view', 'condition',
-                'grade', 'sqft_above', 'sqft_basement', 'yr_built',
+                'grade', 'sqft_above', 'sqft_basement', 'yrs_exists',
                 'yr_renovated', 'sqft_living15', 'sqft_lot15']
     for feature_name in features:
         feature = X[feature_name]
-        pearson_corr = (np.cov(feature, y) / (np.std(feature) * np.std(y)))[0][1]
+        feature_std = np.std(feature)
+        y_std = np.std(y)
+        if not y_std or not feature_std:
+            pearson_corr = 0
+        else:
+            pearson_corr = (np.cov(feature, y) / (feature_std * y_std))[0][1]
         fig = go.Figure([go.Scatter(x=feature, y=y, mode='markers',
-                                    name="Price according to {}".format(feature_name),
+                                    name="Price according to {}".format(
+                                        feature_name),
                                     marker=dict(color="blue", opacity=.7))],
                         layout=go.Layout(
-                            title="{} Feature With p = {}".format(feature_name,
-                                                                  round(pearson_corr, 3)),
+                            title="{} Feature With p = {}".
+                                format(feature_name, round(pearson_corr, 3)),
                             xaxis_title='{}'.format(feature_name),
                             yaxis_title="response",
                             height=400))
@@ -74,13 +80,21 @@ if __name__ == '__main__':
     np.random.seed(0)
 
     # Question 1 - Load and preprocessing of housing prices dataset
-    X = load_data("..\datasets\house_prices.csv")
-    # Dropping unnecessary features
-    X.drop(columns=['id', 'date', 'lat', 'long'], inplace=True)
-    # Removing Non-positive samples
-    X = X[X.select_dtypes(include=[np.number]).ge(0).all(1)]
+    DATA_LOC = "..\datasets\house_prices.csv"
+    X = load_data(DATA_LOC)
     # Removing missing values
-    X.dropna(axis=0, how='any')
+    X.dropna(axis=0, how='any', inplace=True)
+    # Removing Non-positive samples
+    X.drop(columns=['id', 'lat', 'long'], inplace=True)
+    X = X[X.select_dtypes(include=[np.number]).ge(0).all(1)]
+    X = X[X.price != 0]
+    # Design new features
+    year_of_date = X['date'].str[:4].astype(float)
+    month_of_date = X['date'].str[4:6].astype(float)
+    day_of_date = X['date'].str[6:8].astype(float)
+    X['yrs_exists'] = year_of_date+((month_of_date-1) / 12)+\
+                      ((day_of_date-1) / 365)-X['yr_built']
+    X.drop(columns=['date', 'yr_built'], inplace=True)
     # Handling categorical features
     X = pd.get_dummies(X, columns=['zipcode'])
     # Separating price column
@@ -88,7 +102,8 @@ if __name__ == '__main__':
     X.drop('price', inplace=True, axis=1)
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(X, y, './house_price_plots')
+    PLOTS_FOLDER = "./ex2/house_price_plots"
+    feature_evaluation(X, y, PLOTS_FOLDER)
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(X, y)
@@ -100,4 +115,44 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    raise NotImplementedError()
+    percentage = [i for i in range(10, 101, 1)]
+    mean_arr, std_arr = np.zeros(shape=91), np.zeros(shape=91)
+    train_df = train_X.join(train_y)
+    for p in percentage:
+        loss_for_p = []
+        for i in range(10):
+            samples = train_df.sample(frac=p / 100)
+            cur_X = samples.iloc[:, :-1].to_numpy()
+            cur_y = samples.iloc[:, -1].to_numpy()
+            w_hat = LinearRegression().fit(cur_X, cur_y)
+            loss_for_p.append(w_hat.loss(test_X.to_numpy(), test_y.to_numpy()))
+        mean_arr[p-10] = np.mean(loss_for_p)
+        std_arr[p-10] = np.std(loss_for_p)
+    fig = go.Figure([go.Scatter(x=percentage, y=mean_arr, mode='lines',
+                                name="Mean Loss",
+                                line=dict(color='rgb(0,100,80)')),
+                     go.Scatter(
+                         name='Upper Bound',
+                         x=percentage,
+                         y=mean_arr+2 * std_arr,
+                         mode='lines',
+                         marker=dict(color="#444"),
+                         line=dict(width=0),
+                         showlegend=False
+                     ),
+                     go.Scatter(
+                         name='Lower Bound',
+                         x=percentage,
+                         y=mean_arr-2 * std_arr,
+                         marker=dict(color="#444"),
+                         line=dict(width=0),
+                         mode='lines',
+                         fillcolor='rgba(68, 68, 68, 0.3)',
+                         fill='tonexty',
+                         showlegend=False)],
+                    layout=go.Layout(
+                        title="Measuring Mean Loss on test-set for increasing p",
+                        xaxis_title='p - train data percentage',
+                        yaxis_title="Mean Loss",
+                        height=400))
+    fig.show()
