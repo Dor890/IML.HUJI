@@ -2,6 +2,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from numpy.linalg import det, inv
+from IMLearn.metrics.loss_functions import accuracy
 
 
 class LDA(BaseEstimator):
@@ -46,7 +47,18 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.classes_ = np.unique(y)
+        k = self.classes_.size
+        m = X.shape[0]
+        self.mu_ = np.array([np.mean(X[y == cur_class], axis=0) for cur_class in self.classes_])
+        mu_y_ = np.array([self.mu_[int(y_i)] for y_i in y])
+        cov_helper = np.array([X[i] - mu_y_[i] for i in range(m)])
+        self.cov_ = np.matmul(cov_helper.T, cov_helper) / (m-k)  # Unbiased estimator
+        try:
+            self._cov_inv = inv(self.cov_)
+        except np.linalg.LinAlgError:
+            self._cov_inv = self.cov_
+        self.pi_ = np.array([(1/m)*np.sum([1 for i in y if i == cur_class]) for cur_class in self.classes_])
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -62,7 +74,19 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        each_class = []
+        for k in range(self.classes_.size):
+            each_sample = []
+            for X_j in X:
+                a_k = np.dot(self._cov_inv, self.mu_[k])
+                b_k = np.log(self.pi_[k]) - 0.5 * \
+                      np.matmul(np.matmul(self.mu_[k], self._cov_inv), self.mu_[k])
+                each_sample.append(np.matmul(a_k.T, X_j) + b_k)
+            each_class.append(each_sample)
+        each_class = np.transpose(each_class)
+        pred_class = [np.argmax(each_class[i]) for i in range(X.shape[0])]
+        predicted = np.array([self.classes_[i] for i in pred_class])
+        return predicted
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -81,8 +105,17 @@ class LDA(BaseEstimator):
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
-
-        raise NotImplementedError()
+        total_arr = []
+        first = 1 / (np.sqrt(np.power(2*np.pi, X.shape[1])) * det(self.cov_))
+        for x in X:
+            cur_arr = []
+            for k in self.classes_:
+                mahalanobis = np.matmul(np.matmul(
+                    x - self.mu_[k], self._cov_inv), x - self.mu_[k])
+                full = np.exp(-0.5 * mahalanobis) / first * self.pi_[k]
+                cur_arr.append(full)
+            total_arr.append(cur_arr)
+        return np.array(total_arr)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -101,4 +134,4 @@ class LDA(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        return accuracy(y, self.predict(X))
