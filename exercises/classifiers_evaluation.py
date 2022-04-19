@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 pio.templates.default = "simple_white"
-from sklearn.naive_bayes import GaussianNB
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -60,7 +59,7 @@ def run_perceptron():
             y : int
                 Current response
             """
-            fit.training_loss_.append(fit.loss(X, y_true))
+            fit.training_loss_.append(fit._loss(X, y_true))
 
         y_pred = Perceptron(callback=loss_recorder).fit(X, y_true)
         losses = y_pred.training_loss_
@@ -113,28 +112,29 @@ def compare_gaussian_classifiers():
                                    marker=dict(color=colors[lda_y_pred], symbol=symbols[y]))],
                        rows=1, cols=1)
 
-        # LDA - Adding X's as center of fitted Gaussian
-        fig.add_traces([go.Scatter(x=LDA_pred.mu_[:, 0], y=LDA_pred.mu_[:, 1], mode="markers", showlegend=False,
+        # LDA - Adding X's indicating the center of fitted Gaussian
+        fig.add_traces([go.Scatter(x=LDA_pred.mu_[:, 0], y=LDA_pred.mu_[:, 1],
+                                   mode="markers", showlegend=False,
                         marker=dict(color='black', symbol='x'))],
             rows=1, cols=1)
 
         # LDA - Adding ellipse
-        v = np.linalg.eigh(LDA_pred.cov_)[0]
-        a = v[1]
-        b = v[0]
+        a = LDA_pred.cov_[0][0]
+        b = LDA_pred.cov_[1][1]
         axis_sum = np.sum(LDA_pred.mu_, axis=0)
-        x_origin = axis_sum[0] / 3
-        y_origin = axis_sum[1] / 3
-        x_ = []
-        y_ = []
+        x_origin = axis_sum[0] / LDA_pred.classes_.size
+        y_origin = axis_sum[1] / LDA_pred.classes_.size
 
+        x_axis_vals = []
+        y_axis_vals = []
         for t in range(0, 361, 10):
             x = a * (np.cos(np.radians(t))) + x_origin
-            x_.append(x)
+            x_axis_vals.append(x)
             y__ = b * (np.sin(np.radians(t))) + y_origin
-            y_.append(y__)
+            y_axis_vals.append(y__)
 
-        fig.add_traces([go.Scatter(x=np.array(x_), y=np.array(y_), mode='lines', showlegend=False,
+        fig.add_traces([go.Scatter(x=np.array(x_axis_vals), y=np.array(y_axis_vals),
+                                   mode='lines', showlegend=False,
                         line=dict(color='black', width=2))],
                        rows=1, cols=1)
 
@@ -151,22 +151,21 @@ def compare_gaussian_classifiers():
                        rows=1, cols=2)
 
         # GBA - Adding ellipse
-        v = np.linalg.eigh(np.diag(np.mean(GNB_pred.vars_, axis=0)))[0]
-        a = v[1]
-        b = v[0]
+        a = GNB_pred.vars_.mean(axis=0)[0]
+        b = GNB_pred.vars_.mean(axis=0)[1]
         axis_sum = np.sum(GNB_pred.mu_, axis=0)
-        x_origin = axis_sum[0] / 3
-        y_origin = axis_sum[1] / 3
-        x_ = []
-        y_ = []
+        x_origin = axis_sum[0] / GNB_pred.classes_.size
+        y_origin = axis_sum[1] / GNB_pred.classes_.size
 
+        x_axis_vals = []
+        y_axis_vals = []
         for t in range(0, 361, 10):
             x = a * (np.cos(np.radians(t))) + x_origin
-            x_.append(x)
+            x_axis_vals.append(x)
             y__ = b * (np.sin(np.radians(t))) + y_origin
-            y_.append(y__)
+            y_axis_vals.append(y__)
 
-        fig.add_traces([go.Scatter(x=np.array(x_), y=np.array(y_), mode='lines', showlegend=False,
+        fig.add_traces([go.Scatter(x=np.array(x_axis_vals), y=np.array(y_axis_vals), mode='lines', showlegend=False,
                         line=dict(color='black', width=2))],
                        rows=1, cols=2)
 
@@ -178,32 +177,21 @@ def compare_gaussian_classifiers():
         fig.show()
 
 def quiz_question():
-    X1 = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+    X1 = np.array([0, 1, 2, 3, 4, 5, 6, 7]).reshape(-1, 1)
     y1 = np.array([0, 0, 1, 1, 1, 1, 2, 2])
-    LDA_pred = LDA()
-    # LDA_pred.fit(X1, y1)
-    # LDA_pred.predict(X1)
-    # LDA_pred.likelihood(X1)
-
     X2 = np.array([[1, 1], [1, 2], [2, 3], [2, 4], [3, 3], [3, 4]])
-    X3 = np.array([[1, 1, 2], [1, 2, 2], [2, 3, 3], [2, 4, 4], [3, 3, 3], [3, 4, 4]])
     y2 = np.array([0, 0, 1, 1, 1, 1])
-    # LDA_pred.fit(X2, y2)
-    # print(LDA_pred.predict(X2))
-    # x = LDA_pred.likelihood(X2)
-    # print(LDA_pred.likelihood(X2))
-    # for i in x:
-    #     print(i[0] > i[1])
 
     GNB = GaussianNaiveBayes()
     GNB.fit(X2, y2)
     print(GNB.vars_)
-    print(GNB.mu_)
-    print(GNB.predict(X2))
+    # print(GNB.mu_)
+    # print(GNB.pi_)
+    # print(GNB.likelihood(X2))
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     # run_perceptron()
-    compare_gaussian_classifiers()
-    # quiz_question()
+    # compare_gaussian_classifiers()
+    quiz_question()

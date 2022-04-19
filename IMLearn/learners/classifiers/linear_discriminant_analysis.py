@@ -50,7 +50,8 @@ class LDA(BaseEstimator):
         self.classes_ = np.unique(y)
         k = self.classes_.size
         m = X.shape[0]
-        self.mu_ = np.array([np.mean(X[y == cur_class], axis=0) for cur_class in self.classes_])
+        self.mu_ = np.array([np.mean(X[y == cur_class], axis=0)
+                             for cur_class in self.classes_])
         mu_y_ = np.array([self.mu_[int(y_i)] for y_i in y])
         cov_helper = np.array([X[i] - mu_y_[i] for i in range(m)])
         self.cov_ = np.matmul(cov_helper.T, cov_helper) / (m-k)  # Unbiased estimator
@@ -58,7 +59,8 @@ class LDA(BaseEstimator):
             self._cov_inv = inv(self.cov_)
         except np.linalg.LinAlgError:
             self._cov_inv = self.cov_
-        self.pi_ = np.array([(1/m)*np.sum([1 for i in y if i == cur_class]) for cur_class in self.classes_])
+        self.pi_ = np.array([(1/m)*np.sum([1 for i in y if i == cur_class])
+                             for cur_class in self.classes_])
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -80,7 +82,8 @@ class LDA(BaseEstimator):
             for X_j in X:
                 a_k = np.dot(self._cov_inv, self.mu_[k])
                 b_k = np.log(self.pi_[k]) - 0.5 * \
-                      np.matmul(np.matmul(self.mu_[k], self._cov_inv), self.mu_[k])
+                      np.matmul(np.matmul(self.mu_[k], self._cov_inv),
+                                self.mu_[k])
                 each_sample.append(np.matmul(a_k.T, X_j) + b_k)
             each_class.append(each_sample)
         each_class = np.transpose(each_class)
@@ -107,11 +110,11 @@ class LDA(BaseEstimator):
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
         total_arr = []
         first = 1 / (np.sqrt(np.power(2*np.pi, X.shape[1])) * det(self.cov_))
-        for x in X:
+        for X_j in X:
             cur_arr = []
             for k in self.classes_:
                 mahalanobis = np.matmul(np.matmul(
-                    x - self.mu_[k], self._cov_inv), x - self.mu_[k])
+                    X_j - self.mu_[k], self._cov_inv), X_j - self.mu_[k])
                 full = np.exp(-0.5 * mahalanobis) / first * self.pi_[k]
                 cur_arr.append(full)
             total_arr.append(cur_arr)

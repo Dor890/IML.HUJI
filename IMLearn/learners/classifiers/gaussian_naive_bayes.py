@@ -2,6 +2,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from IMLearn.metrics.loss_functions import accuracy
+from numpy.linalg import det, inv
 
 
 class GaussianNaiveBayes(BaseEstimator):
@@ -41,16 +42,14 @@ class GaussianNaiveBayes(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        # np.vsplit - separate mean by class
         self.classes_ = np.unique(y)
-        m = X.shape[0]
-        self.mu_ = np.array(
-            [np.mean(X[y == cur_class], axis=0) for cur_class in
-             self.classes_])
-        self.pi_ = [(1/m)*np.sum([1 for i in y if i == cur_class]) for cur_class in self.classes_]
-        self.vars_ = np.array(
-            [np.var(X[y == cur_class], axis=0) for cur_class in
-             self.classes_])
+        m, f = X.shape[0], X.shape[1]
+        self.mu_ = np.array([np.mean(X[y == cur_class], axis=0)
+                             for cur_class in self.classes_])
+        self.pi_ = np.array([(1/m)*np.sum([1 for i in y if i == cur_class])
+                    for cur_class in self.classes_])
+        self.vars_ = np.array([np.var(X[y == cur_class], axis=0)
+                               for cur_class in self.classes_])
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -66,22 +65,20 @@ class GaussianNaiveBayes(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        each_class = []
-        for k in range(self.classes_.size):
-            cov = np.diag(self.vars_[k])
-            inv_cov = np.linalg.inv(cov)
+        predicted = []
+        for X_j in X:
             each_sample = []
-            for X_j in X:
-                a_k = np.dot(inv_cov, self.mu_[k])
-                b_k = np.log(self.pi_[k]) - 0.5 * \
-                      np.matmul(np.matmul(self.mu_[k], inv_cov),
-                                self.mu_[k])
-                each_sample.append(np.matmul(a_k.T, X_j.T)+b_k)
-            each_class.append(each_sample)
-        each_class = np.transpose(each_class)
-        pred_class = [np.argmax(each_class[i]) for i in range(X.shape[0])]
-        predicted = np.array([self.classes_[i] for i in pred_class])
-        return predicted
+            for k in self.classes_:
+                inv_cov = inv(np.diag(self.vars_[k]))
+                diff = X_j - self.mu_[k]
+                likelihood = 0.5 * np.log(det(inv_cov)) - \
+                             0.5 * diff.T @ inv_cov @ diff
+                posterior = np.log(self.pi_[k]) + likelihood
+                each_sample.append(posterior)
+            pred_class = self.classes_[np.argmax(each_sample)]
+            predicted.append(pred_class)
+        return np.array(predicted)
+
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -100,17 +97,17 @@ class GaussianNaiveBayes(BaseEstimator):
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
-        # total_arr = []
-        # first = 1 / (np.sqrt(np.power(2 * np.pi, X.shape[1])) * det(self.cov_))
-        # for x in X:
-        #     cur_arr = []
-        #     for k in self.classes_:
-        #         mahalanobis = np.matmul(np.matmul(
-        #             x-self.mu_[k], self._cov_inv), x-self.mu_[k])
-        #         full = np.exp(-0.5 * mahalanobis) / first * self.pi_[k]
-        #         cur_arr.append(full)
-        #     total_arr.append(cur_arr)
-        # return np.array(total_arr)
+        likelihood_arr = []
+        for X_j in X:
+            each_sample = []
+            for k in self.classes_:
+                inv_cov = inv(np.diag(self.vars_[k]))
+                diff = X_j - self.mu_[k]
+                likelihood = 0.5 * np.log(det(inv_cov)) - \
+                             0.5 * diff.T @ inv_cov @ diff
+                each_sample.append(likelihood)
+            likelihood_arr.append(each_sample)
+        return np.array(likelihood_arr)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
