@@ -40,7 +40,7 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
     for i in range(y_true.size):
         if y_pred[i] * y_true[i] < 0:
             counter += 1
-    return counter
+    return counter / y_true.size if normalize else counter
 
 
 def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:

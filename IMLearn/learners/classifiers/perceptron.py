@@ -32,6 +32,9 @@ class Perceptron(BaseEstimator):
         training_loss_[i] is the loss value of the i'th training iteration.
         to be filled in `Perceptron.fit` function.
 
+    callback_: Callable[[Perceptron, np.ndarray, int], None]
+        A callable to be called after each update of the model while fitting to given data
+        Callable function should receive as input a Perceptron instance, current sample and current response
     """
     def __init__(self,
                  include_intercept: bool = True,
@@ -52,21 +55,6 @@ class Perceptron(BaseEstimator):
             A callable to be called after each update of the model while fitting to given data.
             Callable function should receive as input a Perceptron instance,
             current sample and current response.
-
-        Attributes
-        ----------
-        include_intercept_: bool
-            Should fitted model include an intercept or not
-
-        max_iter): int, default = 1000
-            Maximum number of passes over training data
-
-        callback_: Callable[[Perceptron, np.ndarray, int], None]
-            A callable to be called after each update of the model while fitting to given data
-            Callable function should receive as input a Perceptron instance, current sample and current response
-
-        coefs_: ndarray of shape (n_features,) or (n_features+1,)
-            Coefficients vector fitted by Perceptron. To be set in `Perceptron.fit` function.
         """
         super().__init__()
         self.include_intercept_ = include_intercept
@@ -101,8 +89,9 @@ class Perceptron(BaseEstimator):
             for i in range(n):
                 if y[i] * np.dot(self.coefs_, X[i]) <= 0:
                     self.coefs_ += y[i] * X[i]
+                    self.callback_(self, X[0], y[0])  # Indexes isn't important in our case
                     change_flag = 1
-            self.callback_(self, X[0], y[0])
+                    break
             if change_flag == 0:
                 break
 
