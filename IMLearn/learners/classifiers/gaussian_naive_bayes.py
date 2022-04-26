@@ -48,7 +48,7 @@ class GaussianNaiveBayes(BaseEstimator):
                              for cur_class in self.classes_])
         self.pi_ = np.array([(1/m)*np.sum([1 for i in y if i == cur_class])
                     for cur_class in self.classes_])
-        self.vars_ = np.array([np.var(X[y == cur_class], axis=0, ddof=self.classes_.size-1)
+        self.vars_ = np.array([np.var(X[y == cur_class], axis=0, ddof=1)
                                for cur_class in self.classes_])  # Unbiased
 
     def _predict(self, X: np.ndarray) -> np.ndarray:

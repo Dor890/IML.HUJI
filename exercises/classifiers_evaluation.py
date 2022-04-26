@@ -170,11 +170,11 @@ def quiz_question():
     GNB.fit(X2, y2)
     print(GNB.vars_)
     print(GNB.mu_)
-    print(GNB.pi_)
+    # print(GNB.pi_)
     # print(GNB.likelihood(X2))
 
 if __name__ == '__main__':
     np.random.seed(0)
-    run_perceptron()
-    compare_gaussian_classifiers()
-    # quiz_question()
+    # run_perceptron()
+    # compare_gaussian_classifiers()
+    quiz_question()
