@@ -74,7 +74,6 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     q2_plot.update_layout(title="Decision Boundary with Increasing Number of Iterations - with Noise={}".format(noise),
                           height=400, margin=dict(t=100)).update_xaxes(visible=False).update_yaxes(visible=False)
     q2_plot.show()
-    q2_plot.write_image("ex4/q2_noise_{}.png".format(noise))
 
     # Question 3: Decision surface of best performing ensemble
     size_for_min = np.argmin(test_errors_arr)
@@ -84,8 +83,9 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
         go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers", showlegend=False,
                    marker=dict(color=test_y, colorscale=[custom[0], custom[-1]],
                    line=dict(color="black", width=1)))],
-        layout=go.Layout(title="Ensemble with Lowest Test Error Is On Size {} with Accuracy {} - Noise={}".format(size_for_min, 1-test_errors_arr[size_for_min], noise)))
+        layout=go.Layout(title="Ensemble with Lowest Test Error Is On Size {} with Accuracy {} - Noise={}".format(size_for_min+1, 1-test_errors_arr[size_for_min], noise)))
     q3_plot.show()
+    q3_plot.write_image("ex4/q3_noise_{}.png".format(noise))
 
     # Question 4: Decision surface with weighted samples
     norm_weights = adaboost_ensemble.D_ / np.max(adaboost_ensemble.D_) * 5
