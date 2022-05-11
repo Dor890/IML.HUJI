@@ -38,20 +38,67 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    raise NotImplementedError()
+    adaboost_ensemble = AdaBoost(iterations=n_learners, wl=DecisionStump).fit(train_X, train_y)
+    test_errors_arr = [adaboost_ensemble.partial_loss(test_X, test_y, i) for i in range(1, n_learners+1)]
+
+    q1_plot = go.Figure([go.Scatter(x=[i for i in range(n_learners)],
+                          y=[adaboost_ensemble.partial_loss(train_X, train_y, i) for i in range(1, n_learners+1)],
+                          mode='lines', line=dict(width=3, color="blue"),
+                          showlegend=True, name="Train Data"),
+                        go.Scatter(x=[i for i in range(n_learners)],
+                                   y=test_errors_arr,
+                                   mode='lines', line=dict(width=3, color="red"),
+                                   showlegend=True, name="Test Data")],
+                        layout=go.Layout(barmode='overlay',
+                        title="Number of Errors as a Function of The Number of Fitted Learners - Noise = {}".format(noise),
+                        xaxis_title="Fitted Learners",
+                        yaxis_title="Errors",
+                        height=500))
+    q1_plot.show()
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
     lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
-    raise NotImplementedError()
+    symbols = np.array(['circle', 'square'])
+    q2_plot = make_subplots(rows=2, cols=2,
+                            subplot_titles=["{} Iterations".format(m) for m in T],
+                            horizontal_spacing=0.12, vertical_spacing=0.3)
+    for i, m in enumerate(T):
+        q2_plot.add_traces([decision_surface(lambda X : adaboost_ensemble.partial_predict(T=m, X=X), lims[0], lims[1], showscale=False),
+            go.Scatter(x=test_X[:, 0], y=test_X[:, 1],
+                       mode="markers", showlegend=False,
+                       marker=dict(color=test_y,
+                              colorscale=[custom[0], custom[-1]],
+                              line=dict(color="black", width=1)))],
+            rows=(i // 2) + 1, cols=(i % 2) + 1)
+    q2_plot.update_layout(title="Decision Boundary with Increasing Number of Iterations - with Noise={}".format(noise),
+                          height=400, margin=dict(t=100)).update_xaxes(visible=False).update_yaxes(visible=False)
+    q2_plot.show()
+    q2_plot.write_image("ex4/q2_noise_{}.png".format(noise))
 
     # Question 3: Decision surface of best performing ensemble
-    raise NotImplementedError()
+    size_for_min = np.argmin(test_errors_arr)
+    q3_plot = go.Figure([decision_surface(
+        lambda X: adaboost_ensemble.partial_predict(X=X, T=size_for_min),
+        lims[0], lims[1], showscale=False),
+        go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers", showlegend=False,
+                   marker=dict(color=test_y, colorscale=[custom[0], custom[-1]],
+                   line=dict(color="black", width=1)))],
+        layout=go.Layout(title="Ensemble with Lowest Test Error Is On Size {} with Accuracy {} - Noise={}".format(size_for_min, 1-test_errors_arr[size_for_min], noise)))
+    q3_plot.show()
 
     # Question 4: Decision surface with weighted samples
-    raise NotImplementedError()
+    norm_weights = adaboost_ensemble.D_ / np.max(adaboost_ensemble.D_) * 5
+    q4_plot = go.Figure([decision_surface(adaboost_ensemble.predict, lims[0], lims[1], showscale=False),
+                         go.Scatter(x=train_X[:, 0], y=train_X[:, 1], mode="markers",
+                         showlegend=False, marker=dict(color=train_y, size=norm_weights,
+                         colorscale=[custom[0], custom[-1]],
+                         line=dict(color="black", width=1)))],
+                         layout=go.Layout(title="Training Set with Last Iter. Weights - Noise={}".format(noise)))
+    q4_plot.show()
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    raise NotImplementedError()
+    fit_and_evaluate_adaboost(noise=0)
+    fit_and_evaluate_adaboost(noise=0.4)
