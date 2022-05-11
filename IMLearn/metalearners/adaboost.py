@@ -49,19 +49,16 @@ class AdaBoost(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        D = np.array([(1 / len(X)) for _ in range(len(X))])
+        m = X.shape[0]  # Number of samples
+        self.D_ = np.ones(m) / m
         self.models_ = np.ndarray((self.iterations_,), dtype=self.wl_)
         self.weights_ = np.ndarray((self.iterations_,), dtype=float)
         for t in range(self.iterations_):
-            stump = self.wl_().fit(X, y * D)
-            pred = stump.predict(X)
-            e = np.sum(D * np.where((pred != y), 1, 0))
-            w = (1 / 2) * np.log((1 - e) / e)
-            D = D * np.exp(-y * w * pred)
-            D *= 1 / np.sum(D)
-            self.models_[t] = stump
-            self.weights_[t] = w
-        self.D_ = D
+            self.models_[t] = self.wl_().fit(X, self.D_ * y)  # Create base learner h[t]
+            epsilon_t = self.D_ @ (y != self.models_[t].predict(X))
+            self.weights_[t] = (0.5 * np.log((1/epsilon_t - 1)))
+            self.D_ *= np.exp(-y * self.weights_[t] * self.models_[t].predict(X))  # Update sample weights
+            self.D_ /= np.sum(self.D_)  # Normalize weights
 
     def _predict(self, X):
         """
