@@ -20,7 +20,6 @@ class PolynomialFitting(BaseEstimator):
         """
         super().__init__()
         self.k_ = k
-        self.transformed_X_ = None
         self.lin_estimator_ = LinearRegression()
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
@@ -35,8 +34,7 @@ class PolynomialFitting(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        self.transformed_X_ = self.__transform(X)
-        self.lin_estimator_.fit(self.transformed_X_, y)
+        self.lin_estimator_.fit(self.__transform(X), y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -52,7 +50,7 @@ class PolynomialFitting(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        return self.lin_estimator_.predict(self.transformed_X_)
+        return self.lin_estimator_.predict(self.__transform(X))
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

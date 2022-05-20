@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Tuple, Callable
 import numpy as np
 from IMLearn import BaseEstimator
+from IMLearn.metrics.loss_functions import mean_square_error
 
 
 def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
@@ -30,4 +31,13 @@ def cross_validate(estimator: BaseEstimator, X: np.ndarray, y: np.ndarray,
     validation_score: float
         Average validation score over folds
     """
-    raise NotImplementedError()
+    train_score, validation_score = 0, 0
+    for i in range(cv):
+        folds_arr = np.arange(y.size) % cv  # Sets the partition
+        train_X, train_y = X[folds_arr != i], y[folds_arr != i]
+        validate_X, validate_y = X[folds_arr == i], y[folds_arr == i]
+        estimator.fit(train_X, train_y)
+        train_score += scoring(train_y, estimator.predict(train_X))
+        validation_score += scoring(validate_y, estimator.predict(validate_X))
+    return train_score / cv, validation_score / cv
+
