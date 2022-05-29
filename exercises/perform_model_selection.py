@@ -26,17 +26,22 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
     # Question 1 - Generate dataset for model f(x)=(x+3)(x+2)(x+1)(x-1)(x-2) + eps for eps Gaussian noise
     # and split into training- and testing portions
     response = lambda x: (x+3)*(x+2)*(x+1)*(x-1)*(x-2)
-    X = np.random.uniform(-3, 3, n_samples)
+    X = np.linspace(-1.2, 2, n_samples)
+    np.random.shuffle(X)
     eps = np.random.normal(0, noise, size=n_samples)
     y_noiseless = response(X)
-    train_X, train_y, test_X, test_y = split_train_test(
-        pd.DataFrame(X), pd.Series(y_noiseless), 2/3)
+    y_noise = y_noiseless + eps
+    train_X, train_y, test_X, test_y =\
+        split_train_test(pd.DataFrame(X), pd.Series(y_noise), 2 / 3)
     fig1 = go.Figure([go.Scatter(x=train_X.to_numpy().flatten(), y=train_y, mode='markers',
                                 name="Train Data",
-                                marker=dict(color="black", opacity=0.7)),
+                                marker=dict(color="blue", opacity=0.7)),
                      go.Scatter(x=test_X.to_numpy().flatten(), y=test_y, mode='markers',
                                 name="Test Data",
-                                marker=dict(color="orange", opacity=0.7))],
+                                marker=dict(color="red", opacity=0.7)),
+                    go.Scatter(x=X, y=y_noiseless, mode='markers',
+                                 name="Noiseless data",
+                                 marker=dict(color="black"))],
                     layout=go.Layout(
                         title="True (noiseless) Model For Function f(x)=(x+3)(x+2)(x+1)(x-1)(x-2),"
                               " noise = {}, samples = {}".format(noise, n_samples),
@@ -45,10 +50,6 @@ def select_polynomial_degree(n_samples: int = 100, noise: float = 5):
                         height=400))
     fig1.show()
     fig1.write_image("ex5/true_model_noise_{}_samples_{}.png".format(noise, n_samples))
-
-    y_noise = y_noiseless + eps
-    train_X, train_y, test_X, test_y = split_train_test(
-        pd.DataFrame(X), pd.Series(y_noise), 2/3)
 
     # Question 2 - Perform CV for polynomial fitting with degrees 0,1,...,10
     poly_deg = 10
@@ -91,13 +92,11 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
     """
     # Question 6 - Load diabetes dataset and split into training and testing portions
     X, y = datasets.load_diabetes(return_X_y=True)
-    train_X = X[:n_samples, :]
-    train_y = y[:n_samples]
-    test_X = X[n_samples:, :]
-    test_y = y[n_samples:]
+    train_X, train_y, test_X, test_y = \
+        X[:n_samples, :], y[:n_samples], X[n_samples:, :], y[n_samples:]
 
     # Question 7 - Perform CV for different values of the regularization parameter for Ridge and Lasso regressions
-    lambda_space = np.linspace(0.01, 10, num=n_evaluations)
+    lambda_space = np.linspace(0.001, 1, num=n_evaluations)
     ridge_train_scores, ridge_validate_scores = np.zeros(n_evaluations), np.zeros(n_evaluations)
     lasso_train_scores, lasso_validate_scores = np.zeros(n_evaluations), np.zeros(n_evaluations)
     for i, lam in enumerate(lambda_space):
@@ -107,7 +106,8 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
         lasso_train_scores[i], lasso_validate_scores[i] = \
             cross_validate(estimator=Lasso(alpha=lam), X=train_X, y=train_y,
                            scoring=mean_square_error)
-    fig3 = make_subplots(rows=1, cols=2, subplot_titles="{} Estimator".format(["Ridge", "Lasso"]),
+    m = ["Ridge", "Lasso"]
+    fig3 = make_subplots(rows=1, cols=2, subplot_titles=["{} Estimator".format(est) for est in m],
                         horizontal_spacing=0.1, vertical_spacing=0.1)
     fig3.add_traces(go.Scatter(x=lambda_space, y=ridge_train_scores, mode='markers',
                     name="Ridge train scores",
@@ -130,10 +130,14 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
     fig3.write_image("ex5/ridge_and_lasso_errors.png")
 
     # Question 8 - Compare best Ridge model, best Lasso model and Least Squares model
+    least_squares_model = LinearRegression().fit(train_X, train_y)
+    ls_errors = round(least_squares_model.loss(test_X, test_y), 3)
+    print("Test error for Least Squares regression is {}".format(ls_errors))
+
     ridge_idx = np.argmin(ridge_validate_scores)
     ridge_lam_star = lambda_space[ridge_idx]
     best_ridge = RidgeRegression(ridge_lam_star).fit(train_X, train_y)
-    ridge_test_errors = best_ridge.loss(test_X, test_y)
+    ridge_test_errors = round(best_ridge.loss(test_X, test_y), 3)
     print("Test error for ridge estimator is {} for lambda_star = {}".
           format(ridge_test_errors, ridge_lam_star))
 
@@ -149,5 +153,5 @@ if __name__ == '__main__':
     np.random.seed(0)
     select_polynomial_degree()
     select_polynomial_degree(noise=0)  # Question 4
-    select_polynomial_degree(n_samples=1500, noise=0)  # Question 5
+    select_polynomial_degree(n_samples=1500, noise=10)  # Question 5
     select_regularization_parameter()
