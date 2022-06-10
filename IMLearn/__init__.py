@@ -5,4 +5,5 @@ __all__ = ["BaseEstimator",
            "learners",
            "metalearners",
            "metrics",
-           "model_selection"]
+           "model_selection",
+           "utils"]
