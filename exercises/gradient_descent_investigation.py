@@ -68,7 +68,7 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
         Recorded parameters
     """
     values_arr, weights_arr = [], []
-    def fresh_callback(model: GradientDescent, **kwargs):
+    def fresh_callback(**kwargs):
         values_arr.append(kwargs['val'])
         weights_arr.append(kwargs['weights'])
     return fresh_callback, values_arr, weights_arr
@@ -169,66 +169,64 @@ def fit_logistic_regression():
     X_train, y_train, X_test, y_test = load_data()
     X_train, y_train, X_test, y_test = X_train.to_numpy(), y_train.to_numpy(),\
                                        X_test.to_numpy(), y_test.to_numpy()
-    logistic = LogisticRegression().fit(X_train, y_train)
-
-    # Plotting convergence rate of logistic regression over SA heart disease data
-    y_proba = logistic.predict_proba(X_test)
-    LG = LGreal().fit(X_train, y_train)
-    y_proba = LG.predict_proba(X_test)[:, 1]
-    fpr, tpr = [], []
-    alpha_space = np.linspace(0, 1, 101)
-    P, N = np.count_nonzero(y_test == 1), np.count_nonzero(y_test == 0)
-    for alpha in alpha_space:
-        fp = np.sum(np.logical_and(y_proba >= alpha, y_test == 0))
-        fpr.append(fp / N)
-        tp = np.sum(np.logical_and(y_proba >= alpha, y_test == 1))
-        tpr.append(tp / P)
-    values = np.array(tpr) - np.array(fpr)
-    best_idx = np.argmax(values)
-    alpha_star = alpha_space[best_idx]
-    print('Best alpha found in ROC is {}'.format(alpha_star))
-
-    # fpr2, tpr2, thresholds = roc_curve(y_test, y_proba)
-    # values = np.array(fpr2)-np.array(tpr2)
+    # logistic = LogisticRegression().fit(X_train, y_train)
+    #
+    # # Plotting convergence rate of logistic regression over SA heart disease data
+    # y_proba = logistic.predict_proba(X_test)
+    # # LG = LGreal().fit(X_train, y_train)
+    # # y_proba = LG.predict_proba(X_test)[:, 1]
+    # # fpr, tpr = np.zeros(101), np.zeros(101)
+    # fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+    # # alpha_space = np.linspace(0, 1, 101)
+    # # P, N = np.count_nonzero(y_test == 1), np.count_nonzero(y_test == 0)
+    # # for i, alpha in enumerate(alpha_space):
+    # #     fp = np.sum(np.logical_and(y_proba >= alpha, y_test == 0))
+    # #     fpr[i] = fp / N
+    # #     tp = np.sum(np.logical_and(y_proba >= alpha, y_test == 1))
+    # #     tpr[i] = tp / P
+    # values = tpr - fpr
     # best_idx = np.argmax(values)
     # alpha_star = thresholds[best_idx]
-    # print('Best alpha found in CHEAT is {}'.format(alpha_star))
-
-    roc_fig = go.Figure([go.Scatter(x=fpr, y=tpr, mode='markers+lines', text=alpha_space,
-                                    name="", showlegend=False, marker_color='blue',
-                                    hovertemplate="<b>Threshold:</b>%{text:.3f}<br>FPR: %{x:.3f}<br>TPR: %{y:.3f}")],
-                        layout=go.Layout(title='ROC Curve of Logistic Regression over dataset',
-                                         xaxis_title='False Positive Rate (FPR)',
-                                         yaxis_title='True Positive Rate (TPR)'))
-    # roc_fig.write_image('ex6/Logistic ROC.png')
-    roc_fig.show()
-    best_logistic = LogisticRegression(alpha=alpha_star).fit(X_train, y_train)
-    print('Model’s test error with best alpha is {}'.format(best_logistic.loss(X_test, y_test)))
+    # print('Best alpha found in ROC is {}'.format(alpha_star))
+    #
+    # roc_fig = go.Figure([go.Scatter(x=fpr, y=tpr, mode='markers+lines', text=thresholds,
+    #                                 name="", showlegend=False, marker_color='blue',
+    #                                 hovertemplate="<b>Threshold:</b>%{text:.3f}<br>FPR: %{x:.3f}<br>TPR: %{y:.3f}")],
+    #                     layout=go.Layout(title='ROC Curve of Logistic Regression over dataset',
+    #                                      xaxis_title='False Positive Rate (FPR)',
+    #                                      yaxis_title='True Positive Rate (TPR)'))
+    # # roc_fig.write_image('ex6/Logistic ROC.png')
+    # # roc_fig.show()
+    # best_logistic = LogisticRegression(alpha=alpha_star).fit(X_train, y_train)
+    # print('Model’s test error with best alpha is {}'.format(best_logistic.loss(X_test, y_test)))
 
     # Fitting l1- and l2-regularized logistic regression models, using cross-validation to specify values
     # of regularization parameter
-    # N_EVALUATIONS = 500
-    # lambda_space = np.linspace(0.001, 1, num=N_EVALUATIONS)
-    # train_scores, validate_scores = np.zeros(N_EVALUATIONS), np.zeros(
-    #     N_EVALUATIONS)
-    # for i, lam in enumerate(lambda_space):
-    #     train_scores[i], validate_scores[i] = cross_validate(
-    #         estimator=LogisticRegression(penalty='l1', lam=lam),
-    #         X=X_train, y=y_train, scoring=misclassification_error)
-    # best_idx = np.argmin(validate_scores)
-    # lam_star = lambda_space[best_idx]
-    # print('Best lambda for L1 found by CV is ' + lam_star)
-    # reg_logistic = LogisticRegression(penalty='l1', lam=lam_star)
-    # print('Model’s test error with L1 is {}'.format(reg_logistic.loss(X_test, y_test)))
-    #
+    N_EVALUATIONS = 10
+    lambda_space = np.linspace(0.001, 0.3, num=N_EVALUATIONS)
+    train_scores, validate_scores = np.zeros(N_EVALUATIONS), np.zeros(
+        N_EVALUATIONS)
+    # Picking best lambda for L1
+    for i, lam in enumerate(lambda_space):
+        train_scores[i], validate_scores[i] = cross_validate(
+            estimator=LogisticRegression(penalty='l1', lam=lam),
+            X=X_train, y=y_train, scoring=misclassification_error, cv=2)
+    best_idx = np.argmin(validate_scores)
+    lam_star = lambda_space[best_idx]
+    print('Best lambda for L1 found by CV is {}'.format(lam_star))
+    reg_logistic = LogisticRegression(penalty='l1', lam=lam_star).fit(X_train, y_train)
+    print('Model’s test error with L1 is {}'.format(reg_logistic.loss(X_test, y_test)))
+
+    # Picking best lambda for L2
     # for i, lam in enumerate(lambda_space):
     #     train_scores[i], validate_scores[i] = cross_validate(
     #         estimator=LogisticRegression(penalty='l2', lam=lam),
     #         X=X_train, y=y_train, scoring=misclassification_error)
     # best_idx = np.argmin(validate_scores)
     # lam_star = lambda_space[best_idx]
-    # print('Best lambda for L2 found by CV is ' + lam_star)
-    # reg_logistic = LogisticRegression(penalty='l2', lam=lam_star)
+    # print('Best lambda for L2 found by CV is {}'.format(lam_star))
+    # reg_logistic = LogisticRegression(penalty='l2', lam=lam_star).fit(X_train,
+    #                                                                   y_train)
     # print('Model’s test error with L2 is {}'.format(reg_logistic.loss(X_test, y_test)))
 
 if __name__ == '__main__':
