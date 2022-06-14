@@ -32,7 +32,7 @@ class L2(BaseModule):
         output: ndarray of shape (1,)
             Value of function at point self.weights
         """
-        raise NotImplementedError()
+        return np.linalg.norm(self.weights_, ord=2) ** 2
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
         """
@@ -48,7 +48,7 @@ class L2(BaseModule):
         output: ndarray of shape (n_in,)
             L2 derivative with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
+        return 2 * self.weights_
 
 
 class L1(BaseModule):
@@ -75,9 +75,9 @@ class L1(BaseModule):
         Returns
         -------
         output: ndarray of shape (1,)
-            Value of function at point self.weights
-        """
-        raise NotImplementedError()
+             Value of function at point self.weights
+       """
+        return np.linalg.norm(self.weights_, ord=1)
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
         """
@@ -93,7 +93,7 @@ class L1(BaseModule):
         output: ndarray of shape (n_in,)
             L1 derivative with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
+        return np.sign(self.weights_)
 
 
 class LogisticModule(BaseModule):
@@ -127,7 +127,13 @@ class LogisticModule(BaseModule):
         output: ndarray of shape (1,)
             Value of function at point self.weights
         """
-        raise NotImplementedError()
+        log_likelihood = 0
+        m = X.shape[0]
+        for i in range(m):
+            y_pred = 1 / (1+np.exp(-X[i] @ self.weights))  # Sigmoid function
+            log_likelihood += y[i] * np.log(y_pred) + (1-y[i]) * np.log(1-y_pred)
+        return -np.array(log_likelihood)
+
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -144,7 +150,12 @@ class LogisticModule(BaseModule):
         output: ndarray of shape (n_features,)
             Derivative of function with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
+        m = X.shape[0]
+        derivative = np.zeros(X.shape[1])
+        for i in range(m):
+            y_pred = 1 / (1+np.exp(-X[i] @ self.weights))
+            derivative += X[i] * (y_pred - y[i])
+        return derivative / m
 
 
 class RegularizedModule(BaseModule):
@@ -196,7 +207,8 @@ class RegularizedModule(BaseModule):
         output: ndarray of shape (1,)
             Value of function at point self.weights
         """
-        raise NotImplementedError()
+        return self.fidelity_module_.compute_output() + \
+               self.lam_ * self.regularization_module_.compute_output()
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
         """
@@ -211,7 +223,8 @@ class RegularizedModule(BaseModule):
         output: ndarray of shape (n_in,)
             Derivative with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
+        return self.fidelity_module_.compute_jacobian()+\
+               self.lam_ * self.regularization_module_.compute_jacobian()
 
     @property
     def weights(self):

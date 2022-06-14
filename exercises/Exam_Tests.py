@@ -1,3 +1,5 @@
-import numpy as np
-
-print(np.tril(np.ones(shape=10), -1) - np.triu(np.ones(shape=10)))
+class Liav:
+    _bdika = 'hello'
+    def __lq__(self, other):
+        if self._bdika == 'mashu':
+            return 3
