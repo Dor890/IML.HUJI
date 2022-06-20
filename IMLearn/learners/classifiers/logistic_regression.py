@@ -1,7 +1,7 @@
 from typing import NoReturn
 import numpy as np
 from IMLearn import BaseEstimator
-from IMLearn.desent_methods import GradientDescent
+from IMLearn.desent_methods import GradientDescent, FixedLR
 from IMLearn.desent_methods.modules import LogisticModule, RegularizedModule, L1, L2
 from ...metrics.loss_functions import misclassification_error
 
@@ -30,7 +30,8 @@ class LogisticRegression(BaseEstimator):
 
     def __init__(self,
                  include_intercept: bool = True,
-                 solver: GradientDescent = GradientDescent(),
+                 solver: GradientDescent =
+                 GradientDescent(learning_rate=FixedLR(1e-4), max_iter=20000),
                  penalty: str = "none",
                  lam: float = 1,
                  alpha: float = .5):
@@ -81,16 +82,16 @@ class LogisticRegression(BaseEstimator):
         """
         if self.include_intercept_:
             X = np.insert(X, 0, np.ones(X.shape[0]), axis=1)
-        weights = np.random.normal(0, 1, X.shape[1])
+        weights = np.random.normal(0, 1, X.shape[1]) / np.sqrt(X.shape[1])
 
         # Initializing module based on the penalty function
         if self.penalty_ == 'l1':
             module = RegularizedModule(
-                LogisticModule(weights), L1(weights), self.lam_, weights,
+                LogisticModule(), L1(), self.lam_, weights,
                 self.include_intercept_)
         elif self.penalty_ == 'l2':
             module = RegularizedModule(
-                LogisticModule(weights), L2(weights), self.lam_, weights,
+                LogisticModule(), L2(), self.lam_, weights,
                 self.include_intercept_)
         else:  # No penalty
             module = LogisticModule(weights)
@@ -112,15 +113,8 @@ class LogisticRegression(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        if self.include_intercept_:
-            X = np.insert(X, 0, np.ones(X.shape[0]), axis=1)
-        pred_y = X @ self.coefs_
-        for i in range(pred_y.size):
-            if 1 / (1+np.exp(-pred_y[i])) >= self.alpha_:
-                pred_y[i] = 1
-            else:
-                pred_y[i] = 0
-        return pred_y
+        pred_y = self.predict_proba(X)
+        return np.where(pred_y > self.alpha_, 1, 0)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -138,7 +132,7 @@ class LogisticRegression(BaseEstimator):
         """
         if self.include_intercept_:
             X = np.insert(X, 0, np.ones(X.shape[0]), axis=1)
-        return 1 / (1+np.exp(-X @ self.coefs_))
+        return 1 / (1 + np.exp(-X @ self.coefs_))
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

@@ -129,7 +129,7 @@ class LogisticModule(BaseModule):
             Value of function at point self.weights
         """
         m = X.shape[0]
-        return -(1/m) * np.sum(y * (X @ self.weights) - np.log(1 + np.exp(-X @ self.weights)))
+        return -(1/m) * np.sum(y * (X @ self.weights) - np.log(1 + np.exp(X @ self.weights)))
 
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
@@ -149,11 +149,12 @@ class LogisticModule(BaseModule):
             Derivative of function with respect to self.weights at point self.weights
         """
         m = X.shape[0]
-        derivative = np.zeros(X.shape[1])
-        for i in range(m):
-            y_pred = 1 / (1+np.exp(-X[i] @ self.weights))
-            derivative += X[i] * (y_pred - y[i])
-        return derivative / m
+        return (-1/m) * (y @ X - X.T @ (1 / (1 + np.exp(-self.weights @ X.T))))
+        # derivative = np.zeros(X.shape[1])
+        # for i in range(m):
+        #     y_pred = 1 / (1+np.exp(-X[i] @ self.weights))
+        #     derivative += X[i] * (y_pred - y[i])
+        # return derivative / m
 
 
 class RegularizedModule(BaseModule):
