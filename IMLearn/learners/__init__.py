@@ -1,8 +1,8 @@
 from .gaussian_estimators import *
 from .. import metalearners
 
-__all__ = ["UnivariateGaussian",
-           "MultivariateGaussian",
+__all__ = ["MultivariateGaussian",
            "regressors",
            "classifiers",
-           "metalearners"]
+           "metalearners",
+           "neural_networks"]
